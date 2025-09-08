@@ -179,6 +179,60 @@
     }
 
     renderPosts();
+
+    function submitPost() {
+  const message = document.getElementById('message').value.trim();
+  const imageInput = document.getElementById('imageInput');
+  const file = imageInput.files[0];
+
+  if (!message && !file) {
+    alert("내용 또는 이미지를 입력하세요.");
+    return;
+  }
+
+  const reader = new FileReader();
+
+  reader.onload = function () {
+    const postData = {
+      message,
+      image: file ? reader.result : null,
+      date: new Date().toLocaleString()
+    };
+
+    if (editKey) {
+      // 수정
+      database.ref('posts/' + editKey).set(postData)
+        .then(() => {
+          console.log("수정 성공!");
+          editKey = null;
+          clearForm();
+          renderPosts();
+        })
+        .catch(error => {
+          console.error("수정 실패:", error);
+        });
+    } else {
+      // 새 글 등록
+      const newPostRef = database.ref('posts').push();
+      newPostRef.set(postData)
+        .then(() => {
+          console.log("저장 성공!");
+          clearForm();
+          renderPosts();
+        })
+        .catch(error => {
+          console.error("저장 실패:", error);
+        });
+    }
+  };
+
+  if (file) {
+    reader.readAsDataURL(file);
+  } else {
+    reader.onload();
+  }
+}
+
   </script>
 </body>
 </html>
