@@ -1,9 +1,8 @@
-<!-- 게시판 (localStorage 기반) -->
 <!DOCTYPE html>
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>게시판 (삭제/수정 가능)</title>
+  <title>Firebase 게시판</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -50,7 +49,7 @@
 </head>
 <body>
 
-  <h2>📌 게시판</h2>
+  <h2>📌 Firebase 게시판</h2>
 
   <textarea id="message" placeholder="내용을 입력하세요"></textarea><br>
   <input type="file" id="imageInput" accept="image/*"><br>
@@ -60,8 +59,27 @@
 
   <div id="postsContainer"></div>
 
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js"></script>
+
   <script>
-    let editIndex = null;
+    // ✅ Firebase 설정
+    const firebaseConfig = {
+      apiKey: "AIzaSyBCEHZSZe2wpeHc6WctUcjyUuNS8p3fxqI",
+      authDomain: "hwidao-5f9de.firebaseapp.com",
+      databaseURL: "https://hwidao-5f9de-default-rtdb.firebaseio.com",
+      projectId: "hwidao-5f9de",
+      storageBucket: "hwidao-5f9de.appspot.com",
+      messagingSenderId: "372324706194",
+      appId: "1:372324706194:web:240e639ea9df95a887c34b"
+    };
+
+    // ✅ Firebase 초기화
+    const app = firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    let editKey = null;
 
     function submitPost() {
       const message = document.getElementById('message').value.trim();
@@ -76,79 +94,91 @@
       const reader = new FileReader();
 
       reader.onload = function () {
-        const posts = JSON.parse(localStorage.getItem('posts') || '[]');
-
-        const newPost = {
+        const postData = {
           message,
           image: file ? reader.result : null,
           date: new Date().toLocaleString()
         };
 
-        if (editIndex !== null) {
-          posts[editIndex] = newPost;
-          editIndex = null;
+        if (editKey) {
+          // 수정
+          database.ref('posts/' + editKey).set(postData, () => {
+            editKey = null;
+            clearForm();
+            renderPosts();
+          });
         } else {
-          posts.unshift(newPost);
+          // 새 글
+          const newPostRef = database.ref('posts').push();
+          newPostRef.set(postData, () => {
+            clearForm();
+            renderPosts();
+          });
         }
-
-        localStorage.setItem('posts', JSON.stringify(posts));
-        renderPosts();
-
-        document.getElementById('message').value = '';
-        document.getElementById('imageInput').value = '';
       };
 
       if (file) {
         reader.readAsDataURL(file);
       } else {
-        // 이미지 없이도 동작
         reader.onload();
       }
     }
 
+    function clearForm() {
+      document.getElementById('message').value = '';
+      document.getElementById('imageInput').value = '';
+    }
+
     function renderPosts() {
-      const posts = JSON.parse(localStorage.getItem('posts') || '[]');
       const container = document.getElementById('postsContainer');
       container.innerHTML = '';
 
-      posts.forEach((post, index) => {
-        const div = document.createElement('div');
-        div.className = 'post';
+      database.ref('posts').once('value', snapshot => {
+        const posts = [];
+        snapshot.forEach(child => {
+          posts.unshift({
+            key: child.key,
+            ...child.val()
+          });
+        });
 
-        div.innerHTML = `
-          <p><strong>작성일:</strong> ${post.date}</p>
-          <p>${post.message}</p>
-          ${post.image ? `<img src="${post.image}" alt="첨부 이미지">` : ''}
-          <div class="post-actions">
-            <button onclick="editPost(${index})">수정</button>
-            <button onclick="deletePost(${index})">삭제</button>
-          </div>
-        `;
+        posts.forEach(post => {
+          const div = document.createElement('div');
+          div.className = 'post';
 
-        container.appendChild(div);
+          div.innerHTML = `
+            <p><strong>작성일:</strong> ${post.date}</p>
+            <p>${post.message}</p>
+            ${post.image ? `<img src="${post.image}" alt="첨부 이미지">` : ''}
+            <div class="post-actions">
+              <button onclick="editPost('${post.key}')">수정</button>
+              <button onclick="deletePost('${post.key}')">삭제</button>
+            </div>
+          `;
+
+          container.appendChild(div);
+        });
       });
     }
 
-    function deletePost(index) {
+    function deletePost(key) {
       if (confirm("정말 삭제하시겠습니까?")) {
-        const posts = JSON.parse(localStorage.getItem('posts') || '[]');
-        posts.splice(index, 1);
-        localStorage.setItem('posts', JSON.stringify(posts));
-        renderPosts();
+        database.ref('posts/' + key).remove(() => {
+          renderPosts();
+        });
       }
     }
 
-    function editPost(index) {
-      const posts = JSON.parse(localStorage.getItem('posts') || '[]');
-      const post = posts[index];
-
-      document.getElementById('message').value = post.message;
-      document.getElementById('imageInput').value = '';
-      editIndex = index;
+    function editPost(key) {
+      database.ref('posts/' + key).once('value', snapshot => {
+        const post = snapshot.val();
+        document.getElementById('message').value = post.message;
+        document.getElementById('imageInput').value = '';
+        editKey = key;
+      });
     }
 
     renderPosts();
   </script>
-
 </body>
 </html>
