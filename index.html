@@ -1,6 +1,36 @@
-{
-  "rules": {
-    ".read": true,
-    ".write": true
-  }
-}
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Firebase Test</title>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+</head>
+<body>
+  <h1>Firebase Test Page</h1>
+  <script>
+    console.log("🔥 Firebase 테스트 시작");
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBCEHZSZe2wpeHc6WctUcjyUuNS8p3fxqI",
+      authDomain: "hwidao-5f9de.firebaseapp.com",
+      databaseURL: "https://hwidao-5f9de-default-rtdb.firebaseio.com",
+      projectId: "hwidao-5f9de",
+      storageBucket: "hwidao-5f9de.appspot.com",
+      messagingSenderId: "372324706194",
+      appId: "1:372324706194:web:240e639ea9df95a887c34b"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    // 테스트: 단순 데이터 쓰기
+    database.ref('test').set({ hello: 'world from GitHub Pages' })
+      .then(() => {
+        console.log("✅ Firebase에 쓰기 성공");
+      })
+      .catch(error => {
+        console.error("❌ Firebase에 쓰기 실패", error);
+      });
+  </script>
+</body>
+</html>
